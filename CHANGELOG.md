@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); ver
 
 ## [Unreleased]
 
+### Added (fork)
+
+- **A side Dock can now stay on your preferred display even when macOS insists on the display beside it.** On some arrangements macOS will not put a Left or Right Dock on a display whose edge touches another screen, whichever display is main. Place the other display above or below your preferred one, sticking out past the Dock edge (System Settings › Displays › Arrange), and turn on *Let the pointer cross a side Dock's edge* in Preferences › Advanced: macOS keeps the Dock on your preferred display, and pushing the pointer past that edge crosses to the other display as if they were side by side, including window and file drags. Off by default; needs Accessibility; two displays only. Behaviour after sleep, reconnection and in full screen is not yet measured.
+
 ## [0.9.5] — 2026-09-26
 
 Sixth public beta. It makes DockKeeper checkable: you can ask the copy running in your menu bar what it is actually holding. It also stops the app's own text contradicting the bottom-Dock guard.

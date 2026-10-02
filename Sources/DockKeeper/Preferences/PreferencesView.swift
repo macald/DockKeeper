@@ -100,6 +100,23 @@ private struct AdvancedTab: View {
                     .font(.caption)
             }
 
+            Divider()
+
+            // Fork DK-FR-F01 / ADR-F002. Copy lives in Core with the decision.
+            Toggle("Let the pointer cross a side Dock's edge", isOn: $state.bridgePointerAcrossDockEdge)
+            Text(PointerBridge.toggleDescription)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(state.pointerBridgeCaption)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            if state.bridgePointerAcrossDockEdge && !state.accessibilityGranted {
+                Button("Open Accessibility Settings") { state.openAccessibilitySettings() }
+                    .font(.caption)
+            }
+
+            Divider()
+
             // DK-FR-013 S11 — the permanent home of the manual recovery.
             // Unconditional (only gated on CoreDock resolving), because the
             // users who need it most are the ones whose record was never

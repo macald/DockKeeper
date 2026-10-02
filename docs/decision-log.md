@@ -743,3 +743,48 @@ change the layout, force a different edge or add a new private-API setter.
 auto-hidden Dock visibility, fullscreen and Mission Control can leave the host
 unknown. The observer is not a general Dock relocation mechanism. Pinning to the
 internal left edge in the measured arrangement remains unresolved.
+
+## ADR-F002 (fork): bridge the pointer across a side Dock's edge for a diagonal arrangement
+
+**Date:** 2026-10-02. **Status:** implemented opt-in in the experimental fork,
+owner-requested; not an upstream decision. **Requirement:** fork DK-FR-F01.
+
+**Context / CONFIRMED** ([side-dock-display](spikes/side-dock-display.md),
+macOS 27.0.1, owner's rig): a Left Dock reached the preferred external only
+when its left edge touched no other display. Making the external main, the
+anchor values, small and large vertical offsets, a shared span outside the
+Dock's own band (22–47 pt) and separate Spaces on *or* off all left the Dock on
+the laptop beside it. With the laptop placed diagonally (below-left, sticking
+out past the edge) the Dock stayed on the external. No public or private setter
+for the Dock's display was found; the earlier SkyLight rect setters record
+without relocating (ADR-015 context).
+
+**Decision:** accept the diagonal arrangement for placement, and recreate the
+lost side crossing in software. A session `CGEventTap` (Accessibility, opt-in,
+off by default) watches pointer moves and drags. A sustained outward push
+(24 pt of accumulated `deltaX`) against the preferred display's Dock edge drops
+the event and posts a replacement at the partner display's far edge, 6 pt
+inside, at the same proportional height — and back. Crossings are ignored for
+200 ms afterwards. Two displays only. Policy is pure in `PointerBridge`
+(DockKeeperCore, unit-tested); the tap is `PointerBridgeTap` (app target).
+DockKeeper does **not** change the arrangement; the user arranges the displays.
+
+**Why this mechanism** ([pointer-bridge spike](spikes/pointer-bridge.md), five
+owner-observed runs): editing `event.location` never crossed displays (0/143);
+`CGWarpMouseCursorPosition` crossed but froze the pointer 250–272 ms each time;
+posting a replacement from a source with a zero local-events suppression
+interval crossed with the pointer moving again in 1–14 ms, and the owner found
+pointer, window and file drags fluid. Without the push threshold and landing
+inset, the first event after a crossing (which carries the jump as its delta)
+bounced the pointer straight back.
+
+**APIs:** all public (`CGEventTap`, `CGEvent` post, `CGEventSource`). The Dock
+edge is still set through the existing ADR-003 exception; no new private API.
+
+**Consequences / risks:** another continuous Accessibility event tap (R-F01);
+apps and shortcuts that read the arrangement see the other display above or
+below; the native diagonal strip stays crossable; behaviour after sleep/wake,
+reconnection, full screen, Mission Control and screen sharing is UNKNOWN; the
+first move after a crossing can advance 20–90 pt (observed, not perceived as a
+problem). Revisit if macOS gains a supported way to choose the side Dock's
+display, or if the pointer-post behaviour changes.

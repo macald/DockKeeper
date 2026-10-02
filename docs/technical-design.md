@@ -826,3 +826,18 @@ To be expanded into `behavior-specification.md` / `test-strategy.md`. Existing c
 | §7 identity | Fingerprint matching | — | Score table, tie→ambiguous, repair rewrites, migration from bare UUID |
 | §8 recovery | Debounce/cooldown/ladder | — | Pure `decide` + simulated clock; oscillation budget triggers `Error` |
 | Manual matrix | Kickoff §7 hardware matrix | — | Blocked on multi-monitor rig (M6) |
+
+
+## Fork amendment: side-Dock pointer bridge (2026-10-02)
+
+Fork DK-FR-F01 / ADR-F002. `PointerBridge` (DockKeeperCore/Display) is a pure
+decision plus geometry: `decide(Snapshot) -> Decision`, `pushedEdge`,
+`landing`, and a value-type `PushTracker` with injected time. `PointerBridgeTap`
+(app target, `Dock/`) is the adapter, modelled on `BottomDockGuardTap`: session
+tap on the main run loop, `MainActor.assumeIsolated` in the callback, re-enable
+on `tapDisabledBy*`. A crossing drops the event and posts a replacement from its
+own `CGEventSource` whose local-events suppression interval is zero while armed
+and restored on stop. `AppState.applyPointerBridge()` runs from the tail of
+`applyBottomDockGuard()`, so it inherits every input path (arrangement,
+preferred display, edge, enable, grant), plus its own toggle. The two taps are
+mutually exclusive by edge: the guard is bottom-only, the bridge left/right-only.

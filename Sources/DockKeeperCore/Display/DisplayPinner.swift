@@ -64,7 +64,8 @@ public enum PinOutcome: Sendable, Equatable {
         case .dockOnOtherDisplay:
             return "Dock is on another display.\n"
                 + "Your preferred display is already main, but the Dock did not follow it.\n"
-                + "Try a different edge or display arrangement."
+                + "Try a different edge, or place the other display diagonally and turn on\n"
+                + "\u{201C}Let the pointer cross a side Dock\u{2019}s edge\u{201D} in Preferences \u{203A} Advanced."
         case .dockPlacementUnverified:
             return "Your preferred display is main; Dock placement is not verified."
         case .singleDisplay:

@@ -1209,6 +1209,48 @@ Then no donation prompt, upgrade prompt, or nag ever interrupts use
 
 ---
 
+## DK-FR-F01 (fork): Let the pointer cross a side Dock's edge
+
+**Purpose.** Keep a Left or Right Dock on the preferred display when macOS
+would put it on the display beside it, by letting the user arrange that display
+diagonally and recreating the side crossing in software (ADR-F002).
+
+**Preconditions (all, else idle with a caption reason, in this order).**
+DockKeeper enabled; feature on (off by default); Accessibility granted; Dock
+edge Left or Right; preferred display resolved and connected; exactly two
+displays; the other display lies entirely above or below the preferred one and
+sticks out past its Dock edge.
+
+**Scenarios.**
+
+- **S1 — Cross outward.** Given the preconditions, when the pointer pushes
+  outward against the preferred display's Dock edge for 24 pt of movement, it
+  lands 6 pt inside the other display's far edge at the same proportional
+  height. CONFIRMED on the owner's rig (spike runs 4–5).
+- **S2 — Cross back.** The mirror of S1 from the other display's far edge.
+- **S3 — Drags.** Window and file drags cross the same way. CONFIRMED by owner
+  observation (run 5), not by an automated test.
+- **S4 — No bounce.** A push is ignored for 200 ms after a crossing, and the
+  landing point is never itself a bridged edge. Unit-tested.
+- **S5 — No native interference.** Only edges touching no display are bridged;
+  any other arrangement is idle (side-by-side, centred stacks, mirroring, more
+  than two displays). Unit-tested.
+- **S6 — Clicks on the Dock.** Clicking Dock items at the bridged edge is not a
+  push and never crosses. Owner-observed (runs 3–5).
+- **S7 — Release.** Disabling the feature or DockKeeper, losing the grant, or
+  quitting releases the tap; nothing is persisted.
+
+**User-visible behavior.** Toggle and caption in Preferences › Advanced; the
+side-Dock divergence message points to it; `--diagnostics` prints a
+`Pointer bridge:` row derived like `Bottom guard:`.
+
+**Testability.** `PointerBridgeTests` (decision, geometry, push tracking, copy).
+Hardware cells for R-F01 remain open.
+
+**Priority / target.** Fork-only, experimental. **Related risks:** R-F01.
+
+---
+
 ## State transitions
 
 The authoritative state machine (diagram and semantics) is TDD §5.1. States: `Disabled`, `Starting`, `Monitoring`, `Restoring`, `PreferredDisplayMissing`, `Degraded`, `Paused` (planned), `Error`.

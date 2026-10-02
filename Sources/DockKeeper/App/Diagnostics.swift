@@ -61,6 +61,7 @@ enum Diagnostics {
         \(placementReport.joined(separator: "\n"))
         Bottom guard:    \(BottomDockGuard.diagnosticsLine(for: derived.decision, paused: Settings.shared.pauseRecord != nil))
         Live state:      \(liveGuardStatus(derived: derived))
+        Pointer bridge:  \(pointerBridgeStatus())
         Paused:          \(pauseStatus())
         Screen-share:    \(screenShareHideStatus())
         """
@@ -108,6 +109,31 @@ enum Diagnostics {
         return LiveGuardReport.DerivedObservation(
             accessibilityTrusted: AXIsProcessTrusted(), decision: decision
         )
+    }
+
+    /// Fork DK-FR-F01: what the pointer-bridge decision would be here. Like
+    /// `Bottom guard:`, a fresh-process derivation, not the running tap.
+    @MainActor
+    private static func pointerBridgeStatus() -> String {
+        let settings = Settings()
+        let displays = DisplayManager.activeDisplays()
+        let candidates = displays.compactMap { display in
+            display.fingerprint.map {
+                FingerprintMatcher.Candidate(displayID: display.displayID, fingerprint: $0)
+            }
+        }
+        var preferredID: CGDirectDisplayID?
+        if case .resolved(let displayID, _) = DisplayIdentityResolver.resolve(
+            stored: settings.preferredDisplayFingerprint, candidates: candidates
+        ) {
+            preferredID = displayID
+        }
+        let decision = PointerBridge.decide(PointerBridge.Snapshot(
+            displays: displays, preferredDisplayID: preferredID, dockEdge: settings.lockEdge,
+            appEnabled: settings.isEnabled, featureEnabled: settings.bridgePointerAcrossDockEdge,
+            accessibilityTrusted: AXIsProcessTrusted()
+        ))
+        return PointerBridge.caption(for: decision)
     }
 
     /// What a *running* instance says about itself, against what this report

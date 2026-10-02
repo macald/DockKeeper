@@ -32,7 +32,8 @@ only — no proprietary code, assets, branding, or text from any other product.
 7. Permissions only when technically necessary, always explained. (Shipped:
    none required by default; two opt-in features — window restore (ADR-010)
    and the bottom-Dock guard (ADR-015) — ask for Accessibility, each explained
-   before its one prompt.)
+   before its one prompt. The fork adds a third, the side-Dock pointer bridge
+   (ADR-F002), on the same terms.)
 8. Codebase suitable for an MIT-licensed public repository.
 
 ## v1.0 boundary

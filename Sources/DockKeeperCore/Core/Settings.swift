@@ -75,6 +75,7 @@ public final class Settings: @unchecked Sendable {
         Keys.pauseHotkeyEnabled: false,
         Keys.hideDockDuringScreenShare: false,
         Keys.lockBottomDockToDisplay: false,
+        Keys.bridgePointerAcrossDockEdge: false,
         Keys.restoreDelay: 0.4,
         Keys.recoveryInterval: 30.0,
         Keys.settingsVersion: 1,
@@ -95,6 +96,7 @@ public final class Settings: @unchecked Sendable {
         static let pauseHotkeyEnabled = "pauseHotkeyEnabled"
         static let hideDockDuringScreenShare = "hideDockDuringScreenShare"
         static let lockBottomDockToDisplay = "lockBottomDockToDisplay"
+        static let bridgePointerAcrossDockEdge = "bridgePointerAcrossDockEdge"
         static let screenShareHideRecord = "screenShareHideRecord"
         static let pauseRecord = "pauseRecord"
         static let liveGuardRecord = "liveGuardRecord"
@@ -256,6 +258,15 @@ public final class Settings: @unchecked Sendable {
     public var lockBottomDockToDisplay: Bool {
         get { defaults.bool(forKey: Keys.lockBottomDockToDisplay) }
         set { defaults.set(newValue, forKey: Keys.lockBottomDockToDisplay) }
+    }
+
+    /// Carry the pointer across a side Dock's edge to the other display, for a
+    /// diagonal arrangement that keeps the Dock on the preferred display (fork
+    /// DK-FR-F01, ADR-F002). Opt-in, **false by default**, needs Accessibility
+    /// for a continuous event tap, like `lockBottomDockToDisplay`.
+    public var bridgePointerAcrossDockEdge: Bool {
+        get { defaults.bool(forKey: Keys.bridgePointerAcrossDockEdge) }
+        set { defaults.set(newValue, forKey: Keys.bridgePointerAcrossDockEdge) }
     }
 
     /// Breadcrumb saying "DockKeeper is holding Dock auto-hide ON for a screen

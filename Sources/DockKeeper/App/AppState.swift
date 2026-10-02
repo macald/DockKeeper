@@ -24,6 +24,7 @@ final class AppState: ObservableObject {
     private let hotKeyCenter = HotKeyCenter()
     private let screenShareHider = ScreenShareHider()
     private let bottomDockGuardTap = BottomDockGuardTap()
+    private let pointerBridgeTap = PointerBridgeTap()
 
 
     /// This process's own kernel identity, read once.
@@ -188,6 +189,25 @@ final class AppState: ObservableObject {
     @Published private(set) var bottomDockGuardDecision: BottomDockGuard.Decision =
         .idle(.featureDisabled)
 
+    /// Carry the pointer across a side Dock's edge to the other display (fork
+    /// DK-FR-F01, ADR-F002). Opt-in, default false, needs Accessibility; asks
+    /// for it once on enable, like the bottom-Dock guard.
+    @Published var bridgePointerAcrossDockEdge: Bool {
+        didSet {
+            guard !isSyncingFromExternal else { return }
+            settings.bridgePointerAcrossDockEdge = bridgePointerAcrossDockEdge
+            if bridgePointerAcrossDockEdge, !AXIsProcessTrusted() {
+                requestAccessibilityPermission()
+            }
+            applyPointerBridge()
+        }
+    }
+
+    /// The bridge's latest decision, for the Advanced-tab caption.
+    @Published private(set) var pointerBridgeDecision: PointerBridge.Decision = .idle(.featureDisabled)
+
+    var pointerBridgeCaption: String { PointerBridge.caption(for: pointerBridgeDecision) }
+
     /// Whether the private screen-watcher symbol resolved on this macOS. Fixed
     /// for the process lifetime; drives the Advanced-tab "unavailable" note.
     let screenCaptureAvailable = ScreenCapture.isAvailable
@@ -235,6 +255,7 @@ final class AppState: ObservableObject {
         self.pauseHotkeyEnabled = settings.pauseHotkeyEnabled
         self.hideDockDuringScreenShare = settings.hideDockDuringScreenShare
         self.lockBottomDockToDisplay = settings.lockBottomDockToDisplay
+        self.bridgePointerAcrossDockEdge = settings.bridgePointerAcrossDockEdge
         FileDiagnostics.shared.isEnabled = settings.diagnosticsFileEnabled
         // System is the source of truth for login-item state.
         self.launchAtLogin = LoginItemManager.isEnabled
@@ -373,6 +394,7 @@ final class AppState: ObservableObject {
         // Idempotent, and a no-op when we never hid anything.
         screenShareHider.stop()
         bottomDockGuardTap.stop()
+        pointerBridgeTap.stop()
         // Retract, so a record that *survives* means the process died by a route
         // that skipped this line — a crash, Force Quit, `kill -9`, or the logout
         // kill. That asymmetry is the only crash signal this app has, and it is
@@ -606,12 +628,36 @@ final class AppState: ObservableObject {
         )
         bottomDockGuardDecision = decision
         bottomDockGuardTap.apply(decision)
+        // Every input the guard depends on — arrangement, preferred display,
+        // edge, enable, grant — is an input of the pointer bridge too, so it
+        // rides this function's call sites instead of growing its own.
+        applyPointerBridge(accessibilityTrusted: trusted)
         // Strictly after `apply`, so the record describes the tap as it is and
         // not as it was about to be. Publishing from the tail of this one
         // function rather than from its call sites is the same anti-drift rule
         // the function's own docstring argues above: a sixth input path added in
         // two years inherits the publish without anyone remembering to add it.
         publishLiveGuardState(accessibilityTrusted: trusted)
+    }
+
+    /// Recompute the pointer bridge and arm or release its tap. Cheap and
+    /// idempotent. Reached from `applyBottomDockGuard()` and its own toggle.
+    private func applyPointerBridge(accessibilityTrusted: Bool = AXIsProcessTrusted()) {
+        let decision = PointerBridge.decide(
+            PointerBridge.Snapshot(
+                displays: displays,
+                preferredDisplayID: resolvedPreferredDisplayID,
+                dockEdge: lockEdge,
+                appEnabled: isEnabled,
+                featureEnabled: bridgePointerAcrossDockEdge,
+                accessibilityTrusted: accessibilityTrusted
+            )
+        )
+        if decision != pointerBridgeDecision {
+            Log.app.notice("Pointer bridge: \(PointerBridge.caption(for: decision), privacy: .public)")
+        }
+        pointerBridgeDecision = decision
+        pointerBridgeTap.apply(decision)
     }
 
     /// Publish what this instance is actually holding, for DK-FR-015.
@@ -887,6 +933,9 @@ final class AppState: ObservableObject {
         }
         if lockBottomDockToDisplay != settings.lockBottomDockToDisplay {
             lockBottomDockToDisplay = settings.lockBottomDockToDisplay
+        }
+        if bridgePointerAcrossDockEdge != settings.bridgePointerAcrossDockEdge {
+            bridgePointerAcrossDockEdge = settings.bridgePointerAcrossDockEdge
         }
         refreshPreferredSelection()
         if isEnabled != settings.isEnabled {
