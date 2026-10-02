@@ -14,7 +14,7 @@ struct PreferencesView: View {
             AdvancedTab()
                 .tabItem { Label("Advanced", systemImage: "wrench.and.screwdriver") }
         }
-        .frame(width: 420, height: 380)
+        .frame(width: 460, height: 460)
     }
 }
 
@@ -22,7 +22,11 @@ private struct AdvancedTab: View {
     @EnvironmentObject private var state: AppState
 
     var body: some View {
-        Form {
+        // Scrolls, and stacks rows instead of using `Form`: with six features
+        // and their captions the tab is taller than the window, and `Form` rows
+        // truncated every caption to one line with no way to read the rest.
+        ScrollView {
+        VStack(alignment: .leading, spacing: 8) {
             Toggle("Verbose logging", isOn: $state.verboseLogging)
             Text("Extra detail in the system log (Console.app, subsystem com.dockkeeper.app).")
                 .font(.caption)
@@ -132,7 +136,9 @@ private struct AdvancedTab: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
+        }
         .onAppear { state.refreshAccessibilityStatus() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             state.refreshAccessibilityStatus()
