@@ -28,39 +28,30 @@ struct MenuBarContent: View {
             Divider()
         }
 
+        // Native menu toggles render NSMenuItem's checkmark. An Image inside
+        // a Button's HStack can be dropped when SwiftUI bridges to NSMenu.
+        // These are exclusive choices: clicking the checked item keeps it set.
         Menu("Lock Edge") {
             ForEach(DockOrientation.userSelectable, id: \.self) { edge in
-                Button {
-                    state.lock(to: edge)
-                } label: {
-                    HStack {
-                        Text(edge.displayName)
-                        if state.lockEdge == edge { Image(systemName: "checkmark") }
-                    }
-                }
+                Toggle(edge.displayName, isOn: Binding(
+                    get: { state.lockEdge == edge },
+                    set: { _ in state.lock(to: edge) }
+                ))
             }
         }
 
         Menu("Preferred Display") {
-            Button {
-                state.setPreferredDisplay(nil)
-            } label: {
-                HStack {
-                    Text("Any (don't pin)")
-                    if !state.hasPreferredDisplay { Image(systemName: "checkmark") }
-                }
-            }
+            Toggle("Any (don't pin)", isOn: Binding(
+                get: { !state.hasPreferredDisplay },
+                set: { _ in state.setPreferredDisplay(nil) }
+            ))
             if state.displays.count > 1 {
                 Divider()
                 ForEach(state.displays) { display in
-                    Button {
-                        state.setPreferredDisplay(display)
-                    } label: {
-                        HStack {
-                            Text(display.name)
-                            if state.preferredDisplaySelectionID == display.id { Image(systemName: "checkmark") }
-                        }
-                    }
+                    Toggle(display.name, isOn: Binding(
+                        get: { state.preferredDisplaySelectionID == display.id },
+                        set: { _ in state.setPreferredDisplay(display) }
+                    ))
                 }
             }
         }

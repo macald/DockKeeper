@@ -321,6 +321,14 @@ Given the app is running
 Then no Dock icon or app switcher entry appears (accessory activation policy)
 And a menu-bar item is present
 
+S1b — Native selection marks (fork)
+Given the user selects a Lock Edge or Preferred Display item
+Then that choice displays the native macOS menu checkmark
+And the other choices in the same submenu are unchecked
+And clicking an already-selected item keeps that selection
+And "Any (don't pin)" is checked only when no display preference is stored
+And a disconnected stored preference is not misrepresented as "Any"
+
 S2 — Honest status
 Given the app is Degraded, or the preferred display is missing
 Then the dropdown states it in plain language
