@@ -128,9 +128,12 @@ And edge locking continues to work         [Decision 2A, narrowed by ADR-009]
 S2b — Separate Spaces ON with a LEFT/RIGHT Dock
 Given "Displays have separate Spaces" is ON and the lock edge is left or right
 When a reconcile pass runs
-Then the pin applies exactly as in S1 (left/right Docks home to the main
-    display in this mode) — and no menu bar moves, since every display
-    keeps its own                [ADR-009 — CONFIRMED on hardware 2026-07-23]
+Then main-display relocation applies as in S1 when necessary
+And a side Dock on an already-main target is checked against a fresh host observation
+And a known different host reports dockOnOtherDisplay, with no reconfiguration loop
+And missing/ambiguous observation or an edge transition reports dockPlacementUnverified
+And no menu bar moves, since every display keeps its own
+[Original stacked-rig success: ADR-009. Side-by-side counterexample: fork ADR-F001.]
 
 S2c — Separate Spaces ON, BOTTOM Dock, and NO preferred display stored
 Given "Displays have separate Spaces" is ON and the lock edge is bottom
@@ -156,7 +159,8 @@ Then the pin is re-applied per S1
 
 S5 — Already main / single display
 Given the preferred display is already main, or only one display is connected
-Then the pass is a no-op with a typed outcome (alreadyOnTarget / singleDisplay)
+Then the pass is a no-op; side edges on an already-main display additionally
+    require host verification per S2b (single-display handling stays unchanged)
 ```
 
 **Failure behavior.** A failed `CGDisplayConfiguration` transaction is cancelled cleanly, reported as a typed `.failed` outcome with user-facing copy (CONFIRMED — implemented); the cooldown budget (`DK-FR-003`-S4) prevents retry storms. Ambiguous identity (two indistinguishable candidates) never guesses — the user is asked to re-pick (implemented 2026-07-23, `ambiguousIdentity` outcome).

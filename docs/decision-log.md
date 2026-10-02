@@ -721,3 +721,25 @@ The other half of ADR-014 that must survive is its standing consequence — **`s
 
 **Date / Status.** 2026-09-03 · **Accepted** — implemented as `ProcessIdentity`, `LiveGuardRecord`, `StoredLiveGuardRecord` / `LiveGuardReading`, `LiveGuardReport`, `Settings.liveGuardRecord` + `publishLiveGuardRecord(_:)`, `BottomDockGuardTap.armedAt` + `vitals`, `AppState.publishLiveGuardState()` with its change guard and its retraction in `prepareForTermination()`, `LiveGuardPublisher` for the write policy, the `--diagnostics` `Live state:` row, and `dockkeeper status --live` with exit codes (57 unit tests in 6 suites). Reverses [#78](https://github.com/blamechris/DockKeeper/issues/78)'s "off by default" and declines its proposed `~/Library/Logs/DockKeeper` home, for the reasons in Options 5 and 8. Does **not** disturb ADR-014: no query IPC is invented, and `status` still reports configured state and not liveness. Closes the reader half of [#61](https://github.com/blamechris/DockKeeper/issues/61) — `clampCount` has a reader for the first time. **Standing obligation: DISCHARGED 2026-09-04** ([session 6](hardware-matrix-results.md), closing [#96](https://github.com/blamechris/DockKeeper/issues/96)). The new build was run as the real menu-bar app, displacing 0.9.4, and every claim about `AppState`'s wiring was observed rather than argued: the publish fires from `applyBottomDockGuard()` on a real state change (with a 20 s idle control showing `stateChangedAt` does *not* drift on a no-op), `prepareForTermination()` retracts on a clean quit (exit 3), a `kill -9` leaves the record to read as *killed rather than quit* (exit 4), and the armed heartbeat refreshed on **four consecutive 30 s intervals** — so the `max(5, recoveryInterval)` bound this line called argued is now measured. Two defects were found in the same sitting and are tracked rather than folded in: [#98](https://github.com/blamechris/DockKeeper/issues/98) (an unrelated CLI edit sweeps the bottom-guard toggle and clears the divergence that would have shown it) and the first on-device reproduction of [#87](https://github.com/blamechris/DockKeeper/issues/87).
 
+
+
+## ADR-F001 (fork): verify side-Dock placement independently of the main display
+
+**Date:** 2026-10-02. **Status:** implemented in the experimental fork; not an
+upstream decision. **Scope:** side-Dock observation and honest reporting only.
+
+**Context / CONFIRMED:** [hardware measurements](spikes/side-dock-display.md)
+show that making the external main is insufficient when a left Dock appears on
+the laptop to its left. The original diagnostics only printed a support claim.
+
+**Decision:** sample on-screen Dock canvas metadata with public Core Graphics
+APIs and identify one exact display-frame match. Keep I/O in `DockHostDetector`
+and decision/copy pure. In the existing full-reconcile flow, report a different
+host or unknown observation instead of assuming success. Do not add retries,
+change the layout, force a different edge or add a new private-API setter.
+`CoreDock` edge reading remains within the existing ADR-003 exception.
+
+**Limitations / UNKNOWN:** other macOS versions and Dock canvas shapes,
+auto-hidden Dock visibility, fullscreen and Mission Control can leave the host
+unknown. The observer is not a general Dock relocation mechanism. Pinning to the
+internal left edge in the measured arrangement remains unresolved.

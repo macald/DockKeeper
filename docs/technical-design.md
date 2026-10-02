@@ -17,6 +17,28 @@ Every product or technical claim in this document carries one of the kickoff pac
 
 ---
 
+## Fork amendment: side-Dock host verification (2026-10-02)
+
+**CONFIRMED:** the ADR-009 main-display assumption does not hold universally.
+With the LG main/right and the laptop left on macOS 27.0.1, a left Dock stays on
+the laptop. See [the bounded hardware experiments](spikes/side-dock-display.md)
+and fork ADR-F001 in the decision log.
+
+`DisplaySnapshot` now carries the observed edge and optional host display ID.
+`DockHostDetector.live` is the read-only system adapter; rectangle matching is
+pure. It reads public on-screen window metadata for this session's Dock PID at
+the Dock window level. A single unambiguous display-sized canvas identifies the
+host; missing, nonmatching or conflicting canvases produce unknown. No titles,
+screenshot pixels, permission prompts, new private APIs or timers are used.
+The production snapshot is captured on the existing full-reconcile path.
+Diagnostics uses the same snapshot and pure decision via `DockPlacementReport`.
+
+A known side-edge mismatch on an already-main target is terminal and visible;
+repeated reconfiguration cannot be justified by a matching main-display ID.
+Unknown observation is not success. This is an observation/reporting fix, **not
+a relocation fix**. The older universal main-display claims below are historical
+assumptions, narrowed by this amendment. Bottom-Dock behavior is unchanged.
+
 ## 1. Executive Summary
 
 **The problem.** macOS relocates the Dock — after sleep/wake, display plug/unplug, resolution and arrangement changes — and offers no built-in way to say "keep the Dock here." Commercial utilities that fix this are paid, closed-source, and often subscription-gated. DockKeeper is a free, MIT-licensed, native alternative with no telemetry, no accounts, and no network use.

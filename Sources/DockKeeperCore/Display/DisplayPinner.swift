@@ -8,11 +8,16 @@ public struct DisplaySnapshot: Sendable, Equatable {
     public let displays: [DisplayInfo]
     public let mainDisplayID: CGDirectDisplayID
     public let separateSpacesEnabled: Bool
+    public let observedDockEdge: DockOrientation?
+    public let dockHostDisplayID: CGDirectDisplayID?
 
-    public init(displays: [DisplayInfo], mainDisplayID: CGDirectDisplayID, separateSpacesEnabled: Bool) {
+    public init(displays: [DisplayInfo], mainDisplayID: CGDirectDisplayID, separateSpacesEnabled: Bool,
+                observedDockEdge: DockOrientation? = nil, dockHostDisplayID: CGDirectDisplayID? = nil) {
         self.displays = displays
         self.mainDisplayID = mainDisplayID
         self.separateSpacesEnabled = separateSpacesEnabled
+        self.observedDockEdge = observedDockEdge
+        self.dockHostDisplayID = dockHostDisplayID
     }
 
     /// The displays offered to fingerprint matching (ADR-004).
@@ -29,6 +34,8 @@ public struct DisplaySnapshot: Sendable, Equatable {
 public enum PinOutcome: Sendable, Equatable {
     case pinned                     // Reconfigured; target is now the main display.
     case alreadyOnTarget            // Target was already the main display.
+    case dockOnOtherDisplay         // Main display is correct; observed Dock host is not.
+    case dockPlacementUnverified    // No unambiguous observation for the requested side edge.
     case singleDisplay              // Only one display; nothing to pin.
     case displayNotConnected        // Preferred display isn't currently attached.
     case ambiguousIdentity          // Two candidates are indistinguishable — never guess (TDD §7.2).
@@ -54,6 +61,12 @@ public enum PinOutcome: Sendable, Equatable {
         switch self {
         case .pinned, .alreadyOnTarget, .noPreference:
             return nil  // Nothing to explain; it worked or isn't set.
+        case .dockOnOtherDisplay:
+            return "Dock is on another display.\n"
+                + "Your preferred display is already main, but the Dock did not follow it.\n"
+                + "Try a different edge or display arrangement."
+        case .dockPlacementUnverified:
+            return "Your preferred display is main; Dock placement is not verified."
         case .singleDisplay:
             return "Only one display is connected."
         case .displayNotConnected:
@@ -190,7 +203,7 @@ public struct MainDisplayPinner: DisplayPinner {
         case .reconfigure(let targetID):
             let code = applyMain(targetID, snapshot.displays)
             if code == 0 {
-                Log.display.info("Pinned Dock by making display \(targetID) main")
+                Log.display.info("Made display \(targetID) main; Dock placement still needs verification")
                 return .pinned
             }
             Log.display.error("Display reconfigure failed with CGError \(code)")
@@ -208,9 +221,10 @@ public struct MainDisplayPinner: DisplayPinner {
     /// Separate-Spaces gate (ADR-009, hardware-confirmed 2026-07-23): with the
     /// setting ON, a **bottom** Dock is per-display/pointer-summoned and does
     /// not follow the main display — declined honestly. A **left/right** Dock
-    /// homes to the main display even in that mode, so main-display
-    /// relocation pins it exactly as in Spaces-off mode (and without the
-    /// menu-bar caveat: every display keeps its own menu bar).
+    /// followed main on the original stacked test rig. This is not universal:
+    /// on macOS 27.0.1 with a laptop left of the preferred external, the left
+    /// Dock stays on the laptop. A side-edge success now requires a matching
+    /// host observation; main-display identity alone is not placement proof.
     nonisolated static func decide(
         snapshot: DisplaySnapshot,
         resolution: PreferredDisplayResolution,
@@ -241,6 +255,14 @@ public struct MainDisplayPinner: DisplayPinner {
                 return .terminal(.unsupportedSeparateSpaces)
             }
             if targetID == snapshot.mainDisplayID {
+                if dockEdge == .left || dockEdge == .right {
+                    guard snapshot.observedDockEdge == dockEdge,
+                          let host = snapshot.dockHostDisplayID,
+                          snapshot.displays.contains(where: { $0.displayID == host }) else {
+                        return .terminal(.dockPlacementUnverified)
+                    }
+                    if host != targetID { return .terminal(.dockOnOtherDisplay) }
+                }
                 return .terminal(.alreadyOnTarget)
             }
             return .reconfigure(targetID)
@@ -250,10 +272,15 @@ public struct MainDisplayPinner: DisplayPinner {
     // MARK: - Live implementations
 
     public static let liveSnapshot: @MainActor () -> DisplaySnapshot = {
-        DisplaySnapshot(
-            displays: DisplayManager.activeDisplays(),
+        let displays = DisplayManager.activeDisplays()
+        let edge = CoreDock.current()?.orientation
+        return DisplaySnapshot(
+            displays: displays,
             mainDisplayID: CGMainDisplayID(),
-            separateSpacesEnabled: readSeparateSpacesEnabled()
+            separateSpacesEnabled: readSeparateSpacesEnabled(),
+            observedDockEdge: edge,
+            dockHostDisplayID: (edge == .left || edge == .right)
+                ? DockHostDetector.live(displays: displays) : nil
         )
     }
 

@@ -1,5 +1,12 @@
 # DockKeeper
 
+> **Experimental fork (macald):** investigates a left Dock staying on the
+> laptop when the preferred/main LG is to its right. This branch detects and
+> reports the mismatch; **it does not yet move the Dock to that internal edge**.
+> [Measurements and limitations](docs/spikes/side-dock-display.md).
+> Local development builds are ad-hoc signed, **not notarized**; the upstream
+> release badges and installation instructions below refer to the original app.
+
 **Free, open-source macOS utility that keeps your Dock on the edge and display you chose.**
 
 [![CI](https://github.com/blamechris/DockKeeper/actions/workflows/ci.yml/badge.svg)](https://github.com/blamechris/DockKeeper/actions/workflows/ci.yml)
@@ -67,7 +74,7 @@ restarts.
 
 - Lock the Dock to **Bottom**, **Left**, or **Right** — flicker-free live repositioning
 - Automatic recovery after sleep, wake, display plug/unplug, resolution and arrangement changes — with burst coalescing, a retry ladder for slow wakes, and an oscillation guard that refuses to fight other software
-- **Preferred display:** keep the Dock on a chosen monitor. Works with *Displays have separate Spaces* **on** (the macOS default) for left/right Docks, for any edge with it off, and — opt-in — for a bottom Dock via the guard below
+- **Preferred display (best-effort):** attempt to keep the Dock on a chosen monitor. Left/right placement is attempted with separate Spaces on or off, but may fail at internal edges between displays. This fork reports observed mismatches or unknown placement. A bottom Dock with separate Spaces on uses the opt-in guard below.
 - Displays recognized by a **multi-signal fingerprint** (survives docks, adapters, and UUID churn; never guesses between identical monitors)
 - **Keep windows in place** (opt-in): restores your window layout after a display pin — one of the two features that use a permission (Accessibility), strictly optional
 - **Keep a bottom Dock on my preferred display** (opt-in): holds the pointer clear of the bottom edge on your other displays so macOS is never asked to move the Dock there. Needs Accessibility, two or more displays, and a bottom-edge lock. It does not move the Dock back, and where one screen sits above another it leaves only the overlapping strip unguarded — your pointer's route between them — standing down entirely only when that leaves nothing to guard
@@ -80,7 +87,8 @@ restarts.
 > **How pinning works:** macOS ties the Dock to the *main* display, so pinning
 > re-bases which display is main. With separate Spaces **off** that also moves
 > the menu bar (expected); with it **on** (default), every display keeps its own
-> menu bar and left/right Docks pin cleanly — a bottom Dock can't be pinned in
+> menu bar. Side-Dock placement also depends on the arrangement (see the fork
+> measurements above); a bottom Dock can't be pinned in
 > that mode, and DockKeeper says so instead of fighting the OS.
 >
 > **A bottom Dock cannot be *moved back* once macOS hands it to another

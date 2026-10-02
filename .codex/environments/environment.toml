@@ -1,0 +1,10 @@
+version = 1
+name = "DockKeeper"
+
+[setup]
+script = ""
+
+[[actions]]
+name = "Run"
+icon = "run"
+command = "./Scripts/run-app.sh debug"
